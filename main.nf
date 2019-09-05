@@ -217,14 +217,14 @@ if (params.long_reads){
 if (params.short_reads && params.long_reads){
     contigsShortReadsOnly
     .mix(contigsLongReadsOnly,contigsHybrid)
-    .into { contigsForSummary, contigsForProkka }
+    .into { contigsForSummary; contigsForProkka }
 } else {
     if (params.short_reads){
         contigsShortReadsOnly
-        .into { contigsForSummary, contigsForProkka }
+        .into { contigsForSummary; contigsForProkka }
     } else {
         contigsLongReadsOnly
-        .into { contigsForSummary, contigsForProkka }
+        .into { contigsForSummary; contigsForProkka }
     }
 }
 
