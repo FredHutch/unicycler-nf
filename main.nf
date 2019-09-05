@@ -262,6 +262,7 @@ for l in gzip.open("${contigs_fasta_gz}", "rt"):
                 for i in contig_dict.split(" ")
             ])
             contig_dict["name"] = contig_name
+            contig_dict["circular"] = contig_dict.get("circular", "false")
             contig_info.append(contig_dict)
         else:
             contig_name = l.lstrip(">").rstrip("\\n")
@@ -275,7 +276,7 @@ if len(contig_info) > 0:
     contig_info = pd.DataFrame(contig_info)
     contig_info["length"] = contig_info["length"].apply(int)
     contig_info["depth"] = contig_info["depth"].apply(lambda s: float(s.rstrip("x")))
-    contig_info["circular"] = contig_info["circular"] == "true"
+    contig_info["circular"] = contig_info["circular"].fillna("false") == "true"
 else:
     contig_info = pd.DataFrame(dict([("length", contig_lengths)])).reset_index()
     contig_info["depth"] = 1
