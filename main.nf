@@ -4,6 +4,7 @@
 params.min_fasta_length = 100
 params.long_reads = false
 params.short_reads = false
+params.prokka = false
 
 def helpMessage() {
     log.info"""
@@ -19,6 +20,7 @@ def helpMessage() {
       --short_reads        Sample sheet contains short read data (`short_R1` and `short_R2`)
       --long_reads         Sample sheet contains long read data (`long_reads`)
       --min_fasta_length   Minimum contig length (default: 100)
+      --prokka             Run the genome annotation tool Prokka
       --help               Display this message
 
     Sample Sheet:
@@ -213,13 +215,16 @@ if (params.long_reads){
 
 // Combine all channels into one
 if (params.short_reads && params.long_reads){
-    contigsAll = contigsShortReadsOnly
-        .mix(contigsLongReadsOnly,contigsHybrid)
+    contigsShortReadsOnly
+    .mix(contigsLongReadsOnly,contigsHybrid)
+    .into { contigsForSummary, contigsForProkka }
 } else {
     if (params.short_reads){
-        contigsAll = contigsShortReadsOnly
+        contigsShortReadsOnly
+        .into { contigsForSummary, contigsForProkka }
     } else {
-        contigsAll = contigsLongReadsOnly
+        contigsLongReadsOnly
+        .into { contigsForSummary, contigsForProkka }
     }
 }
 
@@ -232,7 +237,7 @@ process summarizeAssemblies {
     publishDir "${params.output_folder}/${genome_name}/${read_type}/${mode}/"
 
     input:
-    set val(genome_name), file(contigs_fasta_gz), val(mode), val(read_type) from contigsAll
+    set val(genome_name), file(contigs_fasta_gz), val(mode), val(read_type) from contigsForSummary
 
     output:
     file "${genome_name}.${read_type}.${mode}.json" into assembly_summaries_ch
@@ -315,6 +320,42 @@ output = {
 json.dump(output, open("${genome_name}.${read_type}.${mode}.json", "wt"), indent=4)
 
 """
+}
+
+if (params.prokka) {
+    process prokkaAnnotate {
+        container 'quay.io/fhcrc-microbiome/prokka@sha256:bfa2e2c7cfb5d010cc488f3f8ed8519762f0af61d0d7b32b83ac6bac1eed22a4'
+        cpus 16
+        memory "120 GB"
+        errorStrategy "retry"
+        publishDir "${params.output_folder}/${genome_name}/${read_type}/${mode}/"
+
+        input:
+        set val(genome_name), file(contigs_fasta_gz), val(mode), val(read_type) from contigsForProkka
+        val threads from 16
+        
+        output:
+        file "prokka/${genome_name}.${read_type}.${mode}.faa.gz"
+        file "prokka/${genome_name}.${read_type}.${mode}.gff.gz"
+        file "prokka/${genome_name}.${read_type}.${mode}.tsv.gz"
+        
+        """
+    #!/bin/bash
+    set -e;
+
+    prokka \
+        --outdir prokka/ \
+        --prefix ${genome_name}.${read_type}.${mode} \
+        --cpus ${threads} \
+        --compliant \
+        ${contigs_fasta_gz}
+
+
+    gzip prokka/${genome_name}.${read_type}.${mode}.faa &&
+    gzip prokka/${genome_name}.${read_type}.${mode}.gff &&
+    gzip prokka/${genome_name}.${read_type}.${mode}.tsv
+        """
+    }
 }
 
 // Summarize the assembly
