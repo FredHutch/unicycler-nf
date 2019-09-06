@@ -324,7 +324,7 @@ json.dump(output, open("${genome_name}.${read_type}.${mode}.json", "wt"), indent
 
 if (params.prokka) {
     process prokkaAnnotate {
-        container 'quay.io/fhcrc-microbiome/prokka@sha256:bfa2e2c7cfb5d010cc488f3f8ed8519762f0af61d0d7b32b83ac6bac1eed22a4'
+        container 'ummidock/prokka:1.13.3-01'
         cpus 16
         memory "120 GB"
         errorStrategy "retry"
