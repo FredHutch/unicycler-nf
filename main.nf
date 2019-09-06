@@ -343,12 +343,15 @@ if (params.prokka) {
     #!/bin/bash
     set -e;
 
+    # Decompress the assembly
+    gunzip -c ${contigs_fasta_gz} > ${contigs_fasta_gz.simpleName}.fasta
+
     prokka \
         --outdir prokka/ \
         --prefix ${genome_name}.${read_type}.${mode} \
         --cpus ${threads} \
         --compliant \
-        ${contigs_fasta_gz}
+        ${contigs_fasta_gz.simpleName}.fasta
 
 
     gzip prokka/${genome_name}.${read_type}.${mode}.faa &&
